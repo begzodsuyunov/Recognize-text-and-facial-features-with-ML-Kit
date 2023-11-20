@@ -20,6 +20,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.util.Pair;
@@ -31,8 +32,16 @@ import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.face.Face;
+import com.google.mlkit.vision.face.FaceDetection;
+import com.google.mlkit.vision.face.FaceDetector;
+import com.google.mlkit.vision.face.FaceDetectorOptions;
 import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -110,19 +119,97 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
 
     private void runTextRecognition() {
-        // Replace with code from the codelab to run text recognition.
+        //TODO Replace with code from the codelab to run text recognition.
+        InputImage image = InputImage.fromBitmap(mSelectedImage, 0);
+        TextRecognizer recognizer = TextRecognition.getClient();
+        mTextButton.setEnabled(false);
+        recognizer.process(image)
+                .addOnSuccessListener(
+                        new OnSuccessListener<Text>() {
+                            @Override
+                            public void onSuccess(Text texts) {
+                                mTextButton.setEnabled(true);
+                                processTextRecognitionResult(texts);
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                // Task failed with an exception
+                                mTextButton.setEnabled(true);
+                                e.printStackTrace();
+                            }
+                        });
+
     }
 
     private void processTextRecognitionResult(Text texts) {
-        // Replace with code from the codelab to process the text recognition result.
+        //TODO Replace with code from the codelab to process the text recognition result.
+        List<Text.TextBlock> blocks = texts.getTextBlocks();
+        if (blocks.size() == 0) {
+            showToast("No text found");
+            return;
+        }
+        mGraphicOverlay.clear();
+        mGraphicOverlay.clear();
+        for (int i = 0; i < blocks.size(); i++) {
+            List<Text.Line> lines = blocks.get(i).getLines();
+            for (int j = 0; j < lines.size(); j++) {
+                List<Text.Element> elements = lines.get(j).getElements();
+                for (int k = 0; k < elements.size(); k++) {
+                    GraphicOverlay.Graphic textGraphic = new TextGraphic(mGraphicOverlay, elements.get(k));
+                    mGraphicOverlay.add(textGraphic);
+
+                }
+            }
+        }
     }
 
     private void runFaceContourDetection() {
-        // Replace with code from the codelab to run face contour detection.
+        //TODO Replace with code from the codelab to run face contour detection.
+        InputImage image = InputImage.fromBitmap(mSelectedImage, 0);
+        FaceDetectorOptions options =
+                new FaceDetectorOptions.Builder()
+                        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                        .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
+                        .build();
+
+        mFaceButton.setEnabled(false);
+        FaceDetector detector = FaceDetection.getClient(options);
+        detector.process(image)
+                .addOnSuccessListener(
+                        new OnSuccessListener<List<Face>>() {
+                            @Override
+                            public void onSuccess(List<Face> faces) {
+                                mFaceButton.setEnabled(true);
+                                processFaceContourDetectionResult(faces);
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                // Task failed with an exception
+                                mFaceButton.setEnabled(true);
+                                e.printStackTrace();
+                            }
+                        });
     }
 
     private void processFaceContourDetectionResult(List<Face> faces) {
-        // Replace with code from the codelab to process the face contour detection result.
+        //TODO Replace with code from the codelab to process the face contour detection result.
+        if (faces.size() == 0) {
+            showToast("No face found");
+            return;
+        }
+        mGraphicOverlay.clear();
+        for (int i = 0; i < faces.size(); ++i) {
+            Face face = faces.get(i);
+            FaceContourGraphic faceGraphic = new FaceContourGraphic(mGraphicOverlay);
+            mGraphicOverlay.add(faceGraphic);
+            faceGraphic.updateFace(face);
+        }
     }
 
     private void showToast(String message) {
